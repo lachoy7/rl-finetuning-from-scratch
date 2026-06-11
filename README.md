@@ -64,6 +64,7 @@ Set API keys as needed:
 | `HF_TOKEN` | Downloading gated HuggingFace datasets |
 | `NVIDIA_API_KEY` | Nemotron reward model evaluation |
 | `OPENAI_API_KEY` | Teacher batch generation during SCoRe (optional) |
+| `WANDB_API_KEY` | Weights & Biases experiment tracking (optional) |
 
 ## Project layout
 
@@ -80,6 +81,7 @@ src/
     prepare_score_data.py       # Assign criteria to leaderboard prompts
     generate_initial_responses.py
   train/
+    logging.py                  # TensorBoard and Weights & Biases logging
     training.py                 # SFT, DPO, and SCoRe training loops
     train_sft.py
     train_dpo.py
@@ -170,6 +172,18 @@ python -m src.eval.eval_dpo --dpo-model ./my_dpo_model
 ```
 
 Shell scripts accept environment variables to override defaults (e.g. `OUTPUT_DIR`, `BATCH_SIZE`, `LR`, `MAX_SAMPLES`).
+
+### Weights & Biases
+
+Training scripts log `Loss/train`, `Loss/val`, and `Loss/train_epoch` to both TensorBoard and [Weights & Biases](https://wandb.ai) by default. Set `WANDB_API_KEY` (or run `wandb login`) before training.
+
+```bash
+export WANDB_API_KEY=your_key
+export WANDB_PROJECT=rl-finetuning   # optional, this is the default
+./scripts/train_sft.sh
+```
+
+Disable wandb with `--no-wandb` or `NO_WANDB=1`. Override run metadata via `--wandb-run-name`, `--wandb-entity`, or the `WANDB_RUN_NAME` / `WANDB_ENTITY` environment variables.
 
 ## Data files
 

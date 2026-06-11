@@ -5,6 +5,7 @@ peft
 numpy
 tqdm
 tensorboard
+wandb
 huggingface_hub
 sentence-transformers
 pandas

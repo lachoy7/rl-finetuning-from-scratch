@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM
 
 from src.data.datasets import SFTSmolTalkDataset
+from src.train.logging import add_wandb_args, log_config_from_args
 from src.train.training import fine_tune_sft
 from src.utils import collate_fn, configure_model_tokens, load_tokenizer
 
@@ -27,6 +28,7 @@ def parse_args():
     parser.add_argument("--max-length", type=int, default=720)
     parser.add_argument("--checkpoint-dir", default="./smoltalk")
     parser.add_argument("--output-dir", default="./sft_smoltalk_e1_28k")
+    add_wandb_args(parser)
     return parser.parse_args()
 
 
@@ -62,6 +64,10 @@ def main():
         lr=args.lr,
     )
 
+    log_config = log_config_from_args(args, {"stage": "sft"})
+    if not log_config.run_name:
+        log_config.run_name = "sft"
+
     fine_tune_sft(
         model,
         train_loader,
@@ -71,6 +77,7 @@ def main():
         args.epochs,
         checkpoint_dir=args.checkpoint_dir,
         accumulation_steps=args.accum_steps,
+        log_config=log_config,
     )
     model.save_pretrained(args.output_dir)
     print(f"Saved model to {args.output_dir}")

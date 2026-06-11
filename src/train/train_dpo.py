@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM
 
 from src.data.datasets import UltraFeedbackDataset
+from src.train.logging import add_wandb_args, log_config_from_args
 from src.train.training import fine_tune_dpo
 from src.utils import collate_fn, configure_models_tokens, load_tokenizer
 
@@ -32,6 +33,7 @@ def parse_args():
     parser.add_argument("--accum-steps", type=int, default=128)
     parser.add_argument("--max-length", type=int, default=1024)
     parser.add_argument("--output-dir", default="./final_dpo_modelv2")
+    add_wandb_args(parser)
     return parser.parse_args()
 
 
@@ -78,6 +80,10 @@ def main():
     model.to(device)
     ref_model.to(device)
 
+    log_config = log_config_from_args(args, {"stage": "dpo"})
+    if not log_config.run_name:
+        log_config.run_name = "dpo"
+
     fine_tune_dpo(
         model,
         ref_model,
@@ -88,6 +94,7 @@ def main():
         args.epochs,
         args.beta,
         accumulation_steps=args.accum_steps,
+        log_config=log_config,
     )
     model.save_pretrained(args.output_dir)
     print(f"Saved model to {args.output_dir}")

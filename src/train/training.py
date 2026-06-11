@@ -7,12 +7,12 @@ import time
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 from transformers import PreTrainedModel, PreTrainedTokenizer
 
 from src.data.score import get_revisions, load_data_from_list
 from src.data.datasets import ScoreDataset
+from src.train.logging import LogConfig, TrainLogger
 
 
 # --- SFT ---
@@ -22,7 +22,7 @@ def train_sft(
     model: PreTrainedModel,
     train_loader,
     optimizer,
-    writer: SummaryWriter,
+    writer: TrainLogger,
     epoch: int,
     device: torch.device,
     accumulation_steps: int = 16,
@@ -82,7 +82,7 @@ def train_sft(
 def test_sft(
     model: PreTrainedModel,
     test_loader,
-    writer: SummaryWriter,
+    writer: TrainLogger,
     epoch: int,
     device: torch.device,
 ) -> float:
@@ -139,8 +139,9 @@ def fine_tune_sft(
     num_epochs: int,
     checkpoint_dir: str = "./smoltalk",
     accumulation_steps: int = 16,
+    log_config: LogConfig | None = None,
 ) -> None:
-    writer = SummaryWriter()
+    writer = TrainLogger(log_config)
 
     for epoch in range(num_epochs):
         train_loss = train_sft(
@@ -154,6 +155,7 @@ def fine_tune_sft(
         )
         model.save_pretrained(checkpoint_dir)
         val_loss = test_sft(model, test_loader, writer, epoch, device)
+        writer.add_scalar("Loss/train_epoch", train_loss, epoch)
         print(f"Epoch: {epoch}. Train Loss: {train_loss}. Val Loss: {val_loss}.")
 
     writer.close()
@@ -191,7 +193,7 @@ def train_dpo(
     ref_model: PreTrainedModel,
     train_loader,
     optimizer,
-    writer: SummaryWriter,
+    writer: TrainLogger,
     epoch: int,
     device: torch.device,
     beta: float,
@@ -288,7 +290,7 @@ def test_dpo(
     model: PreTrainedModel,
     ref_model: PreTrainedModel,
     test_loader,
-    writer: SummaryWriter,
+    writer: TrainLogger,
     epoch: int,
     device: torch.device,
     beta: float,
@@ -379,8 +381,9 @@ def fine_tune_dpo(
     num_epochs: int,
     beta: float,
     accumulation_steps: int = 128,
+    log_config: LogConfig | None = None,
 ) -> None:
-    writer = SummaryWriter()
+    writer = TrainLogger(log_config)
 
     for epoch in range(num_epochs):
         train_loss = train_dpo(
@@ -397,6 +400,7 @@ def fine_tune_dpo(
         val_loss = test_dpo(
             model, ref_model, test_loader, writer, epoch, device, beta
         )
+        writer.add_scalar("Loss/train_epoch", train_loss, epoch)
         print(f"Epoch: {epoch}. Train Loss: {train_loss}. Val Loss: {val_loss}.")
         model.save_pretrained(f"./dpo_epoch{epoch}_v2")
 
@@ -410,7 +414,7 @@ def train_score(
     model: PreTrainedModel,
     train_loader,
     optimizer,
-    writer: SummaryWriter,
+    writer: TrainLogger,
     epoch: int,
     device: torch.device,
     accumulation_steps: int = 8,
@@ -474,7 +478,7 @@ def train_score(
 def test_score(
     model: PreTrainedModel,
     test_loader,
-    writer: SummaryWriter,
+    writer: TrainLogger,
     epoch: int,
     device: torch.device,
 ) -> float:
@@ -534,13 +538,15 @@ def fine_tune_score(
     optimizer,
     device: torch.device,
     num_epochs: int,
+    log_config: LogConfig | None = None,
 ) -> tuple[float, float]:
-    writer = SummaryWriter()
+    writer = TrainLogger(log_config)
     train_loss = val_loss = 0.0
 
     for epoch in range(num_epochs):
         train_loss = train_score(model, train_loader, optimizer, writer, epoch, device)
         val_loss = test_score(model, test_loader, writer, epoch, device)
+        writer.add_scalar("Loss/train_epoch", train_loss, epoch)
         print(f"Epoch: {epoch}. Train Loss: {train_loss}. Val Loss: {val_loss}.")
 
     writer.close()
@@ -559,6 +565,7 @@ def run_score(
     num_epochs: int,
     batch_size: int = 32,
     lr: float = 1e-7,
+    log_config: LogConfig | None = None,
 ) -> tuple[float, float]:
     optimizer = torch.optim.AdamW(
         filter(lambda p: p.requires_grad, student.parameters()),
@@ -583,4 +590,5 @@ def run_score(
         optimizer=optimizer,
         device=device,
         num_epochs=num_epochs,
+        log_config=log_config,
     )

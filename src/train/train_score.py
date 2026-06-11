@@ -9,6 +9,7 @@ import torch
 from transformers import AutoModelForCausalLM
 
 from src.data.score import load_initial_responses
+from src.train.logging import add_wandb_args, log_config_from_args
 from src.train.training import run_score
 from src.utils import configure_model_tokens, load_tokenizer
 
@@ -35,6 +36,7 @@ def parse_args():
     parser.add_argument("--lr", type=float, default=1e-7)
     parser.add_argument("--test-prompts", default="test_prompts.pkl")
     parser.add_argument("--test-completions", default="test_completions.pkl")
+    add_wandb_args(parser)
     return parser.parse_args()
 
 
@@ -85,6 +87,11 @@ def main():
         train_completions = _load_revisions(stage)
 
         print(f"Running SCoRe stage={stage}, epochs={epochs}, samples={len(train_raw)}")
+        log_config = log_config_from_args(args, {"stage": "score", "score_stage": stage})
+        if not log_config.run_name:
+            log_config.run_name = f"score-{stage}"
+        log_config.tags = [*args.wandb_tags, "score", stage]
+
         train_loss, val_loss = run_score(
             train_raw,
             r_0_list,
@@ -97,6 +104,7 @@ def main():
             epochs,
             batch_size=args.batch_size,
             lr=args.lr,
+            log_config=log_config,
         )
         print(f"Stage {stage} complete. Train loss: {train_loss}, Val loss: {val_loss}")
 
