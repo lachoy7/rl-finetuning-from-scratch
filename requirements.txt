@@ -1,0 +1,13 @@
+datasets
+torch
+transformers
+peft
+numpy
+tqdm
+tensorboard
+huggingface_hub
+sentence-transformers
+pandas
+openai
+requests
+vllm
