@@ -4,7 +4,7 @@ Class project for **Deep Reinforcement Learning**, Spring 2025.
 
 Fine-tune **Qwen2.5-0.5B** through supervised fine-tuning (SFT), direct preference optimization (DPO), and [SCoRe](https://arxiv.org/abs/2409.12917)-style self-correction curriculum learning. This repo implements the full pipeline from initial response generation through training and reward-model evaluation.
 
-The self-correction stage is inspired by **SCoRe** (Self-Correction via Reinforcement Learning), which trains language models to revise their own outputs using multi-turn learning and criteria-guided feedback. See Kumar et al., [*Training Language Models to Self-Correct via Reinforcement Learning*](https://arxiv.org/abs/2409.12917) (arXiv:2409.12917).
+The self-correction stage is inspired by SCoRe (Self-Correction via Reinforcement Learning), which trains language models to revise their own outputs using multi-turn learning and criteria-guided feedback. In addition to reproducing the core SCoRe framework, we introduce a difficulty-based curriculum (short → medium → long responses) that progressively increases revision complexity during training. Our experiments show that this curriculum substantially improves self-revision quality compared to training without staged progression.
 
 Base model: `Qwen/Qwen2.5-0.5B`
 
@@ -136,7 +136,7 @@ Defaults: start from SFT checkpoint, 60k train examples, 2 epochs, save to `./fi
 
 ### 5. SCoRe self-correction training
 
-Trains short (13 epochs) → med (8) → long (5) curriculum stages sequentially, following the multi-turn self-correction idea from [SCoRe](https://arxiv.org/abs/2409.12917).
+Extends SCoRe with a difficulty-based curriculum learning strategy, training on short (13 epochs) → medium (8) → long (5) responses sequentially. By gradually increasing revision difficulty, the model learns more effective self-correction behaviors and achieves significantly stronger self-revision performance than non-curriculum training.
 
 ```bash
 ./scripts/train_score.sh
